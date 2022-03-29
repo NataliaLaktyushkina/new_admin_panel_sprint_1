@@ -18,6 +18,8 @@ class PersonFilmworkInline(admin.TabularInline):
 @admin.register(FilmWork)
 class FilmWorkAdmin(admin.ModelAdmin):
     inlines = (GenreFilmworkInline, PersonFilmworkInline)
+    # Отображение полей в списке
+    list_display = ('title', 'type', 'creation_date', 'rating',)
 
 
 @admin.register(GenreFilmwork)

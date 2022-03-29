@@ -48,7 +48,7 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
 
     title = models.CharField('name', max_length=255)
     description = models.TextField('description', blank=True)
-    creation_date = models.DateTimeField
+    creation_date = models.DateField('creation_date')
     rating = models.FloatField('rating', blank=True, default=0,
                                validators=[MinValueValidator(0),
                                            MaxValueValidator(100)])

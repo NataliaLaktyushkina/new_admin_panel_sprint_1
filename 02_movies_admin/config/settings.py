@@ -91,7 +91,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 #    }
 #}
 
-
+LOCALE_PATHS = ['movies/locale']
 
 
 # Password validation

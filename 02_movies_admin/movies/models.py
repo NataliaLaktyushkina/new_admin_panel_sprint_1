@@ -1,11 +1,12 @@
 import uuid
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.translation import gettext_lazy as _
 
 
 class TimeStampedMixin(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
-    modified = models.DateTimeField(auto_now=True)
+    created = models.DateTimeField(_('created'), auto_now_add=True)
+    modified = models.DateTimeField(_('modified'), auto_now=True)
 
     class Meta:
         # Этот параметр указывает Django, что этот класс не является представлением таблицы
@@ -24,9 +25,9 @@ class Genre(UUIDMixin, TimeStampedMixin):
     def __str__(self):
         return self.name
 
-    name = models.CharField('name', max_length=255)
+    name = models.CharField(_('name'), max_length=255)
     # blank=True делает поле необязательным для заполнения.
-    description = models.TextField('description', blank=True)
+    description = models.TextField(_('description'), blank=True)
 
     # Если нам нужно добавить данные о самой модели, мы используем класс Meta.
     class Meta:
@@ -46,13 +47,13 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
         movie = 'movie'
         tv_show = 'tv_show'
 
-    title = models.CharField('name', max_length=255)
-    description = models.TextField('description', blank=True)
-    creation_date = models.DateField('creation_date')
-    rating = models.FloatField('rating', blank=True, default=0,
+    title = models.CharField(_('title'), max_length=255)
+    description = models.TextField(_('description'), blank=True)
+    creation_date = models.DateField(_('creation_date'))
+    rating = models.FloatField(_('rating'), blank=True, default=0,
                                validators=[MinValueValidator(0),
                                            MaxValueValidator(100)])
-    type = models.CharField(max_length=100, default='movie', choices=FilmTypes.choices)
+    type = models.CharField(_('type'), max_length=100, default='movie', choices=FilmTypes.choices)
     #  type = models.TextChoices('movie', 'tv_show')
     genres = models.ManyToManyField(Genre, through='GenreFilmwork')
 
@@ -78,7 +79,7 @@ class Person(UUIDMixin, TimeStampedMixin):
     def __str__(self):
         return self.full_name
 
-    full_name = models.CharField('full_name', max_length=255)
+    full_name = models.CharField(_('full_name'), max_length=255)
 
     # Если нам нужно добавить данные о самой модели, мы используем класс Meta.
     class Meta:

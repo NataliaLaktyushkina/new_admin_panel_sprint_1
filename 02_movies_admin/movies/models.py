@@ -85,6 +85,8 @@ class Person(UUIDMixin, TimeStampedMixin):
     class Meta:
         # Ваши таблицы находятся в нестандартной схеме. Это нужно указать в классе модели
         db_table = "content\".\"person"
+        verbose_name = 'Актер'
+        verbose_name_plural = 'Актеры'
 
 
 class PersonFilmWork(UUIDMixin):

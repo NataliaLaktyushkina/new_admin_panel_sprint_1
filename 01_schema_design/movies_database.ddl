@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS content.film_work (
     rating FLOAT,
     type TEXT not null,
     created timestamp with time zone,
-    modified timestamp with time zone
+    modified timestamp with time zone 
 ); 
 
 CREATE TABLE IF NOT EXISTS content.person (

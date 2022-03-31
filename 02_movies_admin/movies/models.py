@@ -5,8 +5,8 @@ from django.utils.translation import gettext_lazy as _
 
 
 class TimeStampedMixin(models.Model):
-    created = models.DateTimeField(_('created'), auto_now_add=True)
-    modified = models.DateTimeField(_('modified'), auto_now=True)
+    created_at = models.DateTimeField(_('created'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('modified'), auto_now=True)
 
     class Meta:
         # Этот параметр указывает Django, что этот класс не является представлением таблицы
@@ -49,6 +49,10 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
 
     title = models.CharField(_('title'), max_length=255)
     description = models.TextField(_('description'), blank=True)
+    # Параметр upload_to указывает, в какой подпапке будут храниться загружемые файлы.
+    # Базовая папка указана в файле настроек как MEDIA_ROOT
+    file_path = models.FileField(_('file'), blank=True, null=True, upload_to='movies/')
+
     creation_date = models.DateField(_('creation_date'))
     rating = models.FloatField(_('rating'), blank=True, default=0,
                                validators=[MinValueValidator(0),

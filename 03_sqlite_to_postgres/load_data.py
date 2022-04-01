@@ -2,8 +2,8 @@ import datetime
 import sqlite3
 import os
 import psycopg2
+
 import uuid
-import pytz
 from dateutil.parser import parse
 from dataclasses import dataclass, field
 from psycopg2.extensions import connection as _connection
@@ -12,9 +12,7 @@ from contextlib import contextmanager
 from dotenv import load_dotenv
 
 # В коде есть обработка ошибок записи и чтения.
-
-# загрузка дат
-
+# провера дат, проверка дублей
 
 
 @dataclass
@@ -65,12 +63,14 @@ class PersonFilmWork:
 
 
 def create_tables_list():
+
     tables_list = list()
     tables_list.append('film_work')
     tables_list.append('genre')
     tables_list.append('genre_film_work')
     tables_list.append('person')
     tables_list.append('person_film_work')
+
     return tables_list
 
 
@@ -86,7 +86,7 @@ def get_data_from_table(curs, pg_conn, table):
         rows = curs.fetchmany(n)
         if rows:
             generate_list_objects(p_curs, table, rows)
-            k += n
+            k += len(rows)
             print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
         else:
             break
@@ -95,19 +95,24 @@ def get_data_from_table(curs, pg_conn, table):
 def generate_list_objects(p_curs, table_name, data):
     if table_name == 'genre':
         data = generate_genres(data)
-        save_data_to_table_genre(p_curs, table_name, data)
+        for element in data:
+            save_data_to_table_genre(p_curs, element)
     elif table_name == 'person':
         data = generate_persons(data)
-        save_data_to_table_person(p_curs, table_name, data)
+        for element in data:
+            save_data_to_table_person(p_curs, element)
     elif table_name == 'film_work':
         data = generate_films(data)
-        save_data_to_table_film_work(p_curs, table_name, data)
+        for element in data:
+            save_data_to_table_film_work(p_curs, element)
     elif table_name == 'genre_film_work':
         data = generate_genre_film_work(data)
-        save_data_to_table_genre_film_work(p_curs, table_name, data)
+        for element in data:
+            save_data_to_table_genre_film_work(p_curs, element)
     elif table_name == 'person_film_work':
         data = generate_person_film_work(data)
-        save_data_to_table_person_film_work(p_curs, table_name, data)
+        for element in data:
+            save_data_to_table_person_film_work(p_curs, element)
 
 
 def generate_genres(data):
@@ -126,16 +131,19 @@ def generate_genres(data):
     return genres
 
 
-def save_data_to_table_genre(p_curs: _connection.cursor,
-                             table_name: str, data: list):
-    for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, name, description, created_at, updated_at)
-                        VALUES ('{id}', '{name}', '{description}', '{created_at}', '{modified_at}')
-                        '''.format(table_name=table_name, id=element.id, name=element.name,
-                                   description=element.description,
-                                   created_at=element.created_at,
-                                   modified_at=element.modified_at)
-        p_curs.execute(insert_query)
+def save_data_to_table_genre(p_curs: _connection.cursor, genre: Genre):
+
+    insert_query = '''
+        INSERT INTO content.genre
+            (id, name, description, created_at, updated_at)
+        VALUES (%(id)s, %(name)s, %(description)s, %(created_at)s, %(modified_at)s
+        )'''
+
+    p_curs.execute(insert_query, {'id': genre.id,
+                                  'name': genre.name,
+                                  'description': genre.description,
+                                  'created_at': genre.created_at,
+                                  'modified_at': genre.modified_at})
 
 
 def generate_persons(data):
@@ -152,18 +160,23 @@ def generate_persons(data):
     return persons
 
 
-def save_data_to_table_person(p_curs, table_name, data):
-    for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, full_name, created_at, updated_at)
-                        VALUES ('{id}', '{full_name}', '{created_at}',  '{modified_at}')
-                        '''.format(table_name=table_name, id=element.id,
-                                   full_name=element.full_name,
-                                   created_at=element.created_at,
-                                   modified_at=element.modified_at)
-        p_curs.execute(insert_query)
+def save_data_to_table_person(p_curs: _connection.cursor, person: Person):
+
+    insert_query = '''
+        INSERT INTO content.person
+            (id, full_name, created_at, updated_at)
+        VALUES ( 
+            %(id)s, %(full_name)s, %(created_at)s, %(modified_at)s
+            )'''
+
+    p_curs.execute(insert_query, {'id': person.id,
+                                  'full_name': person.full_name,
+                                  'created_at': person.created_at,
+                                  'modified_at': person.modified_at})
 
 
 def generate_films(data):
+
     films = list()
     for row in data:
         film = FilmWork(title=row['title'],
@@ -175,48 +188,49 @@ def generate_films(data):
                         rating=row['rating'],
                         type=row['type'],
                         id=row['id'])
+
         film.title = film.title.replace("'", "''")
-        if film.description is None:
-            film.description = ''
-        else:
+
+        if film.description is not None:
             film.description = film.description.replace("'", "''")
+
         if film.creation_date is not None:
             film.creation_date = parse(film.creation_date)
-        else:
-            film.creation_date = datetime.date(1900, 1, 1)
+
         if film.created_at is not None:
             film.created_at = parse(film.created_at)
         else:
             film.created_at = datetime.datetime.now()
+
         if film.modified_at is not None:
             film.modified_at = parse(film.modified_at)
         else:
             film.modified_at = datetime.datetime.now()
-        if film.file_path is None:
-            film.file_path = ''
-        if film.rating is None:
-            film.rating = 0
-        else:
-            film.rating = float(film.rating)
+
         films.append(film)
 
     return films
 
 
-def save_data_to_table_film_work(p_curs: _connection.cursor,
-                                 table_name: str, data: list):
-    for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, title, description, file_path,
-                        rating, type, creation_date, created_at, updated_at )
-                        VALUES ('{id}', '{title}', '{description}', '{file_path}', 
-                        '{rating}', '{type}', '{creation_date}', '{created_at}', '{modified_at}')
-                        '''.format(table_name=table_name, id=element.id, title=element.title,
-                                   description=element.description, file_path=element.file_path,
-                                   rating=element.rating, type=element.type,
-                                   creation_date=element.creation_date,
-                                   created_at=element.created_at,
-                                   modified_at=element.modified_at)
-        p_curs.execute(insert_query)
+def save_data_to_table_film_work(p_curs: _connection.cursor, film: FilmWork):
+
+    insert_query = '''
+        INSERT INTO content.film_work 
+            (id, title, description, file_path,
+            rating, type, creation_date, created_at, updated_at )
+        VALUES (
+            %(id)s, %(title)s, %(description)s, %(file_path)s, %(rating)s, 
+            %(type)s, %(creation_date)s, %(created_at)s, %(modified_at)s
+            )'''
+    p_curs.execute(insert_query, {'id': film.id,
+                                  'title': film.title,
+                                  'description': film.description,
+                                  'file_path': film.file_path,
+                                  'rating': film.rating,
+                                  'type': film.type,
+                                  'creation_date': film.creation_date,
+                                  'created_at': film.created_at,
+                                  'modified_at': film.modified_at})
 
 
 def generate_genre_film_work(data):
@@ -226,25 +240,30 @@ def generate_genre_film_work(data):
                                    genre_id=row['genre_id'],
                                    created_at=row['created_at'],
                                    id=row['id'])
-        genre_film.created_at=parse(genre_film.created_at)
+
+        genre_film.created_at = parse(genre_film.created_at)
+
         relations_genre_film.append(genre_film)
 
     return relations_genre_film
 
 
-def save_data_to_table_genre_film_work(p_curs: _connection.cursor,
-                                       table_name: str, data: list):
-    for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, film_work_id, genre_id, created)
-                        VALUES ('{id}', '{film_work_id}', '{genre_id}', '{created_at}')
-                        '''.format(table_name=table_name, id=element.id,
-                                   film_work_id=element.film_work_id,
-                                   genre_id=element.genre_id,
-                                   created_at=element.created_at)
-        p_curs.execute(insert_query)
+def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_film: GenreFilmWork):
+
+    insert_query = '''
+        INSERT INTO content.genre_film_work
+            (id, film_work_id, genre_id, created)
+        VALUES (%(id)s, %(film_work_id)s, %(genre_id)s, %(created_at)s
+            )'''
+
+    p_curs.execute(insert_query, {'id': genre_film.id,
+                                  'film_work_id': genre_film.film_work_id,
+                                  'genre_id': genre_film.genre_id,
+                                  'created_at': genre_film.created_at})
 
 
 def generate_person_film_work(data):
+
     relations_person_film = list()
     for row in data:
         person_film = PersonFilmWork(film_work_id=row['film_work_id'],
@@ -252,23 +271,25 @@ def generate_person_film_work(data):
                                      role=row['role'],
                                      created_at=row['created_at'],
                                      id=row['id'])
+
         person_film.created_at = parse(person_film.created_at)
         relations_person_film.append(person_film)
 
     return relations_person_film
 
 
-def save_data_to_table_person_film_work(p_curs: _connection.cursor,
-                                       table_name: str, data: list):
-    for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, film_work_id, person_id, role, created)
-                        VALUES ('{id}', '{film_work_id}', '{person_id}', '{role}', '{created_at}')
-                        '''.format(table_name=table_name, id=element.id,
-                                   film_work_id=element.film_work_id,
-                                   person_id=element.person_id,
-                                   role=element.role,
-                                   created_at=element.created_at)
-        p_curs.execute(insert_query)
+def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_film: PersonFilmWork):
+
+    insert_query = '''
+        INSERT INTO content.person_film_work
+            (id, film_work_id, person_id, role, created)
+        VALUES (%(id)s, %(film_work_id)s, %(person_id)s, %(role)s, %(created_at)s
+            )'''
+    p_curs.execute(insert_query, {'id': person_film.id,
+                                  'film_work_id': person_film.film_work_id,
+                                  'person_id': person_film.person_id,
+                                  'role': person_film.role,
+                                  'created_at': person_film.created_at})
 
 
 def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
@@ -292,17 +313,31 @@ def conn_context(db_path: str):
     conn.close()
 
 
-if __name__ == '__main__':
+def get_enviroment_var():
     dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
     if os.path.exists(dotenv_path):
         load_dotenv(dotenv_path)
-    db_name = os.environ.get('DB_NAME')
-    user = os.environ.get('USER_APP')
-    password = os.environ.get('PASSWORD')
-    host = os.environ.get('HOST')
-    port = os.environ.get('PORT')
-    dsl = {'dbname': db_name, 'user': user, 'password': password, 'host': host, 'port': port}
-    db_path = os.environ.get('DB_PATH'),
-    #   with sqlite3.connect('db.sqlite') as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
+    env_var = {}
+    env_var['db_name'] = os.environ.get('DB_NAME')
+    env_var['user'] = os.environ.get('USER_APP')
+    env_var['password'] = os.environ.get('PASSWORD')
+    env_var['host'] = os.environ.get('HOST')
+    env_var['port'] = os.environ.get('PORT')
+    env_var['db_path'] = os.environ.get('DB_PATH'),
+
+    return env_var
+
+
+if __name__ == '__main__':
+    env_var = get_enviroment_var()
+
+    dsl = {'dbname': env_var['db_name'],
+           'user': env_var['user'],
+           'password': env_var['password'],
+           'host': env_var['host'],
+           'port': env_var['port']}
+
+    db_path = env_var['db_path']
+
     with conn_context(db_path[0]) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
         load_from_sqlite(sqlite_conn, pg_conn)

@@ -54,8 +54,9 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
     file_path = models.FileField(_('file'), blank=True, null=True, upload_to='movies/')
 
     creation_date = models.DateField(_('creation_date'))
-    rating = models.FloatField(_('rating'), blank=True, default=0,
-                               validators=[MinValueValidator(0),
+    rating = models.DecimalField(_('rating'), blank=True, default=0,
+                                 max_digits=4, decimal_places=1,
+                                 validators=[MinValueValidator(0),
                                            MaxValueValidator(100)])
     type = models.CharField(_('type'), max_length=100, default='movie', choices=FilmTypes.choices)
     #  type = models.TextChoices('movie', 'tv_show')

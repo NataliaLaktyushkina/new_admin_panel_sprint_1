@@ -50,11 +50,20 @@ class GenreFilmWork:
     id: uuid.UUID = field(default_factory=uuid.uuid4)
 
 
+@dataclass
+class PersonFilmWork:
+    film_work_id: str
+    person_id: str
+    role: str
+    # created_at: str
+    id: uuid.UUID = field(default_factory=uuid.uuid4)
+
+
 def create_tables_list():
     tables_list = list()
     tables_list.append('film_work')
     tables_list.append('genre')
-    # tables_list.append('genre_film_work')
+    tables_list.append('genre_film_work')
     tables_list.append('person')
     # tables_list.append('person_film_work')
     return tables_list
@@ -73,7 +82,7 @@ def get_data_from_table(curs, pg_conn, table):
         if rows:
             generate_list_objects(p_curs, table, rows)
             k += n
-            print(' .join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+            print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
         else:
             break
 
@@ -88,6 +97,9 @@ def generate_list_objects(p_curs, table_name, data):
     elif table_name == 'film_work':
         data = generate_films(data)
         save_data_to_table_film_work(p_curs, table_name, data)
+    elif table_name == 'genre_film_work':
+        data = generate_genre_film_work(data)
+        save_data_to_table_genre_film_work(p_curs, table_name, data)
 
 
 def generate_genres(data):
@@ -120,7 +132,7 @@ def generate_persons(data):
         person = Person(full_name=row['full_name'],
                       # created_at=row['created_at'],
                       # modified_at=row['updated_at'],
-                      id=row['id'])
+                        id=row['id'])
         person.full_name = person.full_name.replace("'", "''")
         persons.append(person)
     return persons
@@ -139,14 +151,14 @@ def generate_films(data):
     films = list()
     for row in data:
         film = FilmWork(title=row['title'],
-                         description=row['description'],
+                        description=row['description'],
                       # creation_date=row['creation_date'],
                       # created_at=row['created_at'],
                       # modified_at=row['updated_at'],
-                         file_path=row['file_path'],
-                         rating=row['rating'],
-                         type=row['type'],
-                         id=row['id'])
+                        file_path=row['file_path'],
+                        rating=row['rating'],
+                        type=row['type'],
+                        id=row['id'])
         film.title = film.title.replace("'", "''")
         if film.description is None:
             film.description = ''
@@ -157,14 +169,14 @@ def generate_films(data):
         if film.rating is None:
             film.rating = 0
         else:
-            film.rating=float(film.rating)
+            film.rating = float(film.rating)
         films.append(film)
 
     return films
 
 
 def save_data_to_table_film_work(p_curs: _connection.cursor,
-                             table_name: str, data: list):
+                                 table_name: str, data: list):
     for element in data:
         insert_query = '''INSERT INTO content.{table_name} (id, title, description, file_path,
                         rating, type)
@@ -176,13 +188,26 @@ def save_data_to_table_film_work(p_curs: _connection.cursor,
         p_curs.execute(insert_query)
 
 
+def generate_genre_film_work(data):
+    relations_genre_film = list()
+    for row in data:
+        genre_film = GenreFilmWork(film_work_id=row['film_work_id'],
+                                   genre_id=row['genre_id'],
+                                   # created_at=row['created_at'],
+                                   id=row['id'])
+        relations_genre_film.append(genre_film)
 
-def save_data_to_table_genre_film_work(p_curs, table_name, data):
+    return relations_genre_film
+
+
+def save_data_to_table_genre_film_work(p_curs: _connection.cursor,
+                                       table_name: str, data: list):
     for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, name, description)
-                        VALUES ('{id}', '{name}', '{description}')
-                        '''.format(table_name=table_name, id=element.id, name=element.name,
-                                   description=element.description)
+        insert_query = '''INSERT INTO content.{table_name} (id, film_work_id, genre_id)
+                        VALUES ('{id}', '{film_work_id}', '{genre_id}')
+                        '''.format(table_name=table_name, id=element.id,
+                                   film_work_id=element.film_work_id,
+                                   genre_id=element.genre_id)
         p_curs.execute(insert_query)
 
 

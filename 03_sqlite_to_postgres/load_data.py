@@ -39,8 +39,8 @@ class Genre:
 @dataclass
 class Person:
     full_name: str
-    # created_at: str
-    # modified_at: str
+    created_at: str
+    modified_at: str
     id: uuid.UUID = field(default_factory=uuid.uuid4)
 
 
@@ -66,7 +66,7 @@ def create_tables_list():
     # tables_list.append('film_work')
     tables_list.append('genre')
     # tables_list.append('genre_film_work')
-    # tables_list.append('person')
+    tables_list.append('person')
     # tables_list.append('person_film_work')
     return tables_list
 
@@ -139,20 +139,24 @@ def generate_persons(data):
     persons = list()
     for row in data:
         person = Person(full_name=row['full_name'],
-                      # created_at=row['created_at'],
-                      # modified_at=row['updated_at'],
+                        created_at=row['created_at'],
+                        modified_at=row['updated_at'],
                         id=row['id'])
         person.full_name = person.full_name.replace("'", "''")
+        person.created_at = parse(person.created_at)
+        person.modified_at = parse(person.modified_at)
         persons.append(person)
     return persons
 
 
 def save_data_to_table_person(p_curs, table_name, data):
     for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, full_name)
-                        VALUES ('{id}', '{full_name}')
+        insert_query = '''INSERT INTO content.{table_name} (id, full_name, created_at, updated_at)
+                        VALUES ('{id}', '{full_name}', '{created_at}',  '{modified_at}')
                         '''.format(table_name=table_name, id=element.id,
-                                   full_name=element.full_name,)
+                                   full_name=element.full_name,
+                                   created_at=element.created_at,
+                                   modified_at=element.modified_at)
         p_curs.execute(insert_query)
 
 

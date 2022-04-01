@@ -3,13 +3,16 @@ import sqlite3
 import os
 import psycopg2
 import uuid
+import pytz
+from dateutil.parser import parse
 from dataclasses import dataclass, field
 from psycopg2.extensions import connection as _connection
 from psycopg2.extras import DictCursor
 from contextlib import contextmanager
 from dotenv import load_dotenv
+
 # В коде есть обработка ошибок записи и чтения.
-# Переменные окружения
+
 # загрузка дат
 
 
@@ -28,8 +31,8 @@ class FilmWork:
 class Genre:
     name: str
     description: field(default_factory='')
-    # created_at: str
-    # modified_at: str
+    created_at: str
+    modified_at: str
     id: uuid.UUID = field(default_factory=uuid.uuid4)
 
 
@@ -60,11 +63,11 @@ class PersonFilmWork:
 
 def create_tables_list():
     tables_list = list()
-    tables_list.append('film_work')
+    # tables_list.append('film_work')
     tables_list.append('genre')
-    tables_list.append('genre_film_work')
-    tables_list.append('person')
-    tables_list.append('person_film_work')
+    # tables_list.append('genre_film_work')
+    # tables_list.append('person')
+    # tables_list.append('person_film_work')
     return tables_list
 
 
@@ -109,11 +112,13 @@ def generate_genres(data):
     for row in data:
         genre = Genre(name=row['name'],
                       description=row['description'],
-                      # created_at=row['created_at'],
-                      # modified_at=row['updated_at'],
+                      created_at=row['created_at'],
+                      modified_at=row['updated_at'],
                       id=row['id'])
         if genre.description is None:
             genre.description = ''
+        genre.created_at = parse(genre.created_at)
+        genre.modified_at = parse(genre.modified_at)
         genres.append(genre)
     return genres
 
@@ -121,10 +126,12 @@ def generate_genres(data):
 def save_data_to_table_genre(p_curs: _connection.cursor,
                              table_name: str, data: list):
     for element in data:
-        insert_query = '''INSERT INTO content.{table_name} (id, name, description)
-                        VALUES ('{id}', '{name}', '{description}')
+        insert_query = '''INSERT INTO content.{table_name} (id, name, description, created_at, updated_at)
+                        VALUES ('{id}', '{name}', '{description}', '{created_at}', '{modified_at}')
                         '''.format(table_name=table_name, id=element.id, name=element.name,
-                                   description=element.description)
+                                   description=element.description,
+                                   created_at=element.created_at,
+                                   modified_at=element.modified_at)
         p_curs.execute(insert_query)
 
 

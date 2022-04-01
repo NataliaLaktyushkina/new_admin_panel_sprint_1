@@ -1,16 +1,15 @@
 import datetime
 import sqlite3
-
+import os
 import psycopg2
 import uuid
 from dataclasses import dataclass, field
 from psycopg2.extensions import connection as _connection
 from psycopg2.extras import DictCursor
 from contextlib import contextmanager
-
+from dotenv import load_dotenv
 # В коде есть обработка ошибок записи и чтения.
 # Переменные окружения
-# all tables - загрузить соотношения
 # загрузка дат
 
 
@@ -261,9 +260,16 @@ def conn_context(db_path: str):
 
 
 if __name__ == '__main__':
-    # вынести в переменные окружения
-    dsl = {'dbname': 'movies_database', 'user': 'app', 'password': '123qwe', 'host': '127.0.0.1', 'port': 5432}
-    db_path = 'db.sqlite'
+    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+    db_name = os.environ.get('DB_NAME')
+    user = os.environ.get('USER_APP')
+    password = os.environ.get('PASSWORD')
+    host = os.environ.get('HOST')
+    port = os.environ.get('PORT')
+    dsl = {'dbname': db_name, 'user': user, 'password': password, 'host': host, 'port': port}
+    db_path = os.environ.get('DB_PATH'),
     #   with sqlite3.connect('db.sqlite') as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
-    with conn_context(db_path) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
+    with conn_context(db_path[0]) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
         load_from_sqlite(sqlite_conn, pg_conn)

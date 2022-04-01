@@ -65,7 +65,7 @@ def create_tables_list():
     tables_list.append('genre')
     tables_list.append('genre_film_work')
     tables_list.append('person')
-    # tables_list.append('person_film_work')
+    tables_list.append('person_film_work')
     return tables_list
 
 
@@ -100,6 +100,9 @@ def generate_list_objects(p_curs, table_name, data):
     elif table_name == 'genre_film_work':
         data = generate_genre_film_work(data)
         save_data_to_table_genre_film_work(p_curs, table_name, data)
+    elif table_name == 'person_film_work':
+        data = generate_person_film_work(data)
+        save_data_to_table_person_film_work(p_curs, table_name, data)
 
 
 def generate_genres(data):
@@ -208,6 +211,31 @@ def save_data_to_table_genre_film_work(p_curs: _connection.cursor,
                         '''.format(table_name=table_name, id=element.id,
                                    film_work_id=element.film_work_id,
                                    genre_id=element.genre_id)
+        p_curs.execute(insert_query)
+
+
+def generate_person_film_work(data):
+    relations_person_film = list()
+    for row in data:
+        person_film = PersonFilmWork(film_work_id=row['film_work_id'],
+                                     person_id=row['person_id'],
+                                     role=row['role'],
+                                   # created_at=row['created_at'],
+                                     id=row['id'])
+        relations_person_film.append(person_film)
+
+    return relations_person_film
+
+
+def save_data_to_table_person_film_work(p_curs: _connection.cursor,
+                                       table_name: str, data: list):
+    for element in data:
+        insert_query = '''INSERT INTO content.{table_name} (id, film_work_id, person_id, role)
+                        VALUES ('{id}', '{film_work_id}', '{person_id}', '{role}')
+                        '''.format(table_name=table_name, id=element.id,
+                                   film_work_id=element.film_work_id,
+                                   person_id=element.person_id,
+                                   role=element.role)
         p_curs.execute(insert_query)
 
 

@@ -49,5 +49,5 @@ CREATE TABLE IF NOT EXISTS content.genre_film_work (
 	FOREIGN KEY (film_work_id)  REFERENCES content.film_work(id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX film_work_person_idx   ON content.person_film_work (film_work_id, person_id);
+CREATE UNIQUE INDEX film_work_person_role_idx   ON content.person_film_work (film_work_id, person_id, role);
 CREATE UNIQUE INDEX film_work_genre_idx   ON content.genre_film_work (film_work_id, genre_id);

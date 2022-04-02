@@ -11,9 +11,6 @@ from psycopg2.extras import DictCursor
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
-# В коде есть обработка ошибок записи и чтения.
-# провера дат, проверка дублей
-
 
 @dataclass
 class FilmWork:
@@ -75,21 +72,32 @@ def create_tables_list():
 
 
 def get_data_from_table(curs, pg_conn, table):
-    query_text = "SELECT * FROM " + table + ";"
-    curs.execute(query_text)
-    p_curs = pg_conn.cursor()
-    truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
-    p_curs.execute(truncate_query)
-    n = 100
-    k = 0
-    while True:
-        rows = curs.fetchmany(n)
-        if rows:
-            generate_list_objects(p_curs, table, rows)
-            k += len(rows)
-            print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
-        else:
-            break
+
+    try:
+        query_text = "SELECT * FROM " + table + ";"
+        curs.execute(query_text)
+
+        try:
+            p_curs = pg_conn.cursor()
+            truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
+            p_curs.execute(truncate_query)
+
+            n = 100
+            k = 0
+            while True:
+                rows = curs.fetchmany(n)
+                if rows:
+                    generate_list_objects(p_curs, table, rows)
+                    k += len(rows)
+                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                else:
+                    break
+
+        except psycopg2.Error as error:
+            print('Ошибка сокращения таблицы ', table,  error)
+
+    except sqlite3.Error as error:
+        print('Ошибка чтения данных ', error)
 
 
 def generate_list_objects(p_curs, table_name, data):
@@ -136,14 +144,20 @@ def save_data_to_table_genre(p_curs: _connection.cursor, genre: Genre):
     insert_query = '''
         INSERT INTO content.genre
             (id, name, description, created_at, updated_at)
-        VALUES (%(id)s, %(name)s, %(description)s, %(created_at)s, %(modified_at)s
-        )'''
-
-    p_curs.execute(insert_query, {'id': genre.id,
+        VALUES (%(id)s, %(name)s, %(description)s, %(created_at)s, %(modified_at)s)
+        ON CONFLICT (id)
+            DO UPDATE SET  
+                (name, description, created_at, updated_at) =  
+                (EXCLUDED.name, EXCLUDED.description, EXCLUDED.created_at, EXCLUDED.updated_at) 
+        '''
+    try:
+        p_curs.execute(insert_query, {'id': genre.id,
                                   'name': genre.name,
                                   'description': genre.description,
                                   'created_at': genre.created_at,
                                   'modified_at': genre.modified_at})
+    except psycopg2.Error as error:
+        print('Ошибка записи данных в таблицу genre', error)
 
 
 def generate_persons(data):
@@ -167,12 +181,19 @@ def save_data_to_table_person(p_curs: _connection.cursor, person: Person):
             (id, full_name, created_at, updated_at)
         VALUES ( 
             %(id)s, %(full_name)s, %(created_at)s, %(modified_at)s
-            )'''
-
-    p_curs.execute(insert_query, {'id': person.id,
+            )
+        ON CONFLICT (id)
+            DO UPDATE SET  
+                (full_name, created_at, updated_at) =  
+                (EXCLUDED.full_name, EXCLUDED.created_at, EXCLUDED.updated_at) 
+        '''
+    try:
+        p_curs.execute(insert_query, {'id': person.id,
                                   'full_name': person.full_name,
                                   'created_at': person.created_at,
                                   'modified_at': person.modified_at})
+    except psycopg2.Error as error:
+        print('Ошибка записи данных в таблицу person', error)
 
 
 def generate_films(data):
@@ -221,8 +242,18 @@ def save_data_to_table_film_work(p_curs: _connection.cursor, film: FilmWork):
         VALUES (
             %(id)s, %(title)s, %(description)s, %(file_path)s, %(rating)s, 
             %(type)s, %(creation_date)s, %(created_at)s, %(modified_at)s
-            )'''
-    p_curs.execute(insert_query, {'id': film.id,
+            )
+        ON CONFLICT (id)
+            DO UPDATE SET  
+                (title, description, file_path,
+            rating, type, creation_date, created_at, updated_at) =  
+                (EXCLUDED.title, EXCLUDED.description, EXCLUDED.file_path,
+            EXCLUDED.rating, EXCLUDED.type, EXCLUDED.creation_date, 
+            EXCLUDED.created_at, EXCLUDED.updated_at ) 
+        '''
+
+    try:
+        p_curs.execute(insert_query, {'id': film.id,
                                   'title': film.title,
                                   'description': film.description,
                                   'file_path': film.file_path,
@@ -231,6 +262,8 @@ def save_data_to_table_film_work(p_curs: _connection.cursor, film: FilmWork):
                                   'creation_date': film.creation_date,
                                   'created_at': film.created_at,
                                   'modified_at': film.modified_at})
+    except psycopg2.Error as error:
+        print('Ошибка записи данных в таблицу film_work', error)
 
 
 def generate_genre_film_work(data):
@@ -254,12 +287,19 @@ def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_film: G
         INSERT INTO content.genre_film_work
             (id, film_work_id, genre_id, created)
         VALUES (%(id)s, %(film_work_id)s, %(genre_id)s, %(created_at)s
-            )'''
-
-    p_curs.execute(insert_query, {'id': genre_film.id,
+            )
+        ON CONFLICT (id)
+            DO UPDATE SET  
+                (film_work_id, genre_id, created) =  
+                (EXCLUDED.film_work_id, EXCLUDED.genre_id, EXCLUDED.created)
+            '''
+    try:
+        p_curs.execute(insert_query, {'id': genre_film.id,
                                   'film_work_id': genre_film.film_work_id,
                                   'genre_id': genre_film.genre_id,
                                   'created_at': genre_film.created_at})
+    except psycopg2.Error as error:
+        print('Ошибка записи данных в таблицу genre_film_work', error)
 
 
 def generate_person_film_work(data):
@@ -283,13 +323,21 @@ def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_film:
     insert_query = '''
         INSERT INTO content.person_film_work
             (id, film_work_id, person_id, role, created)
-        VALUES (%(id)s, %(film_work_id)s, %(person_id)s, %(role)s, %(created_at)s
-            )'''
-    p_curs.execute(insert_query, {'id': person_film.id,
+        VALUES (%(id)s, %(film_work_id)s, %(person_id)s, %(role)s, %(created_at)s)
+        ON CONFLICT (id)
+            DO UPDATE SET  
+                (film_work_id, person_id, role, created) =  
+                (EXCLUDED.film_work_id, EXCLUDED.person_id, EXCLUDED.role, EXCLUDED.created)           
+        '''
+
+    try:
+        p_curs.execute(insert_query, {'id': person_film.id,
                                   'film_work_id': person_film.film_work_id,
                                   'person_id': person_film.person_id,
                                   'role': person_film.role,
                                   'created_at': person_film.created_at})
+    except psycopg2.Error as error:
+        print('Ошибка записи данных в таблицу person_film_work', error)
 
 
 def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
@@ -305,12 +353,17 @@ def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
 @contextmanager
 def conn_context(db_path: str):
     # Устанавливаем соединение с БД
-    conn = sqlite3.connect(db_path)
-    # По-умолчанию SQLite возвращает строки в виде кортежа значений.
-    # Эта строка указывает, что данные должны быть в формате "ключ-значение"
-    conn.row_factory = sqlite3.Row
-    yield conn
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        # По-умолчанию SQLite возвращает строки в виде кортежа значений.
+        # Эта строка указывает, что данные должны быть в формате "ключ-значение"
+        conn.row_factory = sqlite3.Row
+        yield conn
+    except sqlite3.Error as error:
+        print('Ошибка соединения с sqlite', error)
+    finally:
+        if conn:
+            conn.close()
 
 
 def get_enviroment_var():

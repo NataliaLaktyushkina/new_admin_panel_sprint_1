@@ -8,11 +8,6 @@ from contextlib import contextmanager
 
 #  utilities:
 # env
-# tables list
-
-
-
-
 
 class TestLoadingData(unittest.TestCase):
 
@@ -58,9 +53,21 @@ class TestLoadingData(unittest.TestCase):
         self.compare(table_name)
 
     def test_number_of_records_person(self):
-
         table_name = 'person'
         self.compare(table_name)
+
+    def test_number_of_records_film_work(self):
+        table_name = 'film_work'
+        self.compare(table_name)
+
+    def test_number_of_records_person_film_work(self):
+        table_name = 'person_film_work'
+        self.compare(table_name)
+
+    def test_number_of_records_genre_film_work(self):
+        table_name = 'genre_film_Work'
+        self.compare(table_name)
+
 
 def get_environment_var():
     os.chdir('../..')

@@ -71,15 +71,15 @@ class TestLoadingData(unittest.TestCase):
 
     def test_table_content_genre(self):
 
-        table_name = 'genre'
-        # получить порцию данных их sqlite
-        query_text = "SELECT * FROM " + table_name + ";"
+        query_text = "SELECT * FROM genre"
         self.sqlite_curs.execute(query_text)
+
         n = 100
         while True:
             rows = self.sqlite_curs.fetchmany(n)
             if rows:
                 for row in rows:
+
                     psql_query_text = '''
                         SELECT * FROM content.genre
                         WHERE id = %(id)s
@@ -95,13 +95,40 @@ class TestLoadingData(unittest.TestCase):
                                          'description': (row['description'] if row['description'] is not None else ''),
                                          'created_at': parse(row['created_at']),
                                          'updated_at': parse(row['updated_at'])})
+
                     p_rows = self.p_curs.fetchall();
                     self.assertEqual(1, len(p_rows))
             else:
                 break
 
-        # есди количество записей = 1, то тест пройден
-        # сравнить массив данных?
+    def test_table_content_person(self):
+
+        query_text = "SELECT * FROM person"
+        self.sqlite_curs.execute(query_text)
+
+        n = 100
+        while True:
+            rows = self.sqlite_curs.fetchmany(n)
+            if rows:
+                for row in rows:
+                    psql_query_text = '''
+                           SELECT * FROM content.person
+                           WHERE id = %(id)s
+                               AND full_name = %(full_name)s
+                               AND  created_at = %(created_at)s
+                               AND  updated_at = %(updated_at)s
+                               '''
+
+                    self.p_curs.execute(psql_query_text,
+                                        {'id': row['id'],
+                                         'full_name': row['full_name'].replace("'", "''"),
+                                         'created_at': parse(row['created_at']),
+                                         'updated_at': parse(row['updated_at'])})
+
+                    p_rows = self.p_curs.fetchall();
+                    self.assertEqual(1, len(p_rows), msg='full_name = ' + row['full_name'])
+            else:
+                break
 
 
 def get_environment_var():

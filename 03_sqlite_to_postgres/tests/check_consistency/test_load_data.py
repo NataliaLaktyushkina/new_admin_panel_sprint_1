@@ -5,6 +5,7 @@ import sqlite3
 from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
 from contextlib import contextmanager
+from dateutil.parser import parse
 
 #  utilities:
 # env
@@ -37,8 +38,8 @@ class TestLoadingData(unittest.TestCase):
 
     def compare(self, table_name):
 
-        sqlite_query_text = 'select * from ' + table_name
-        psql_query_text = 'select * from content.' + table_name
+        sqlite_query_text = 'SELECT * FROM ' + table_name
+        psql_query_text = 'SELECT * FROM content.' + table_name
 
         self.sqlite_curs.execute(sqlite_query_text)
         sqlite_rows = self.sqlite_curs.fetchall()
@@ -68,6 +69,40 @@ class TestLoadingData(unittest.TestCase):
         table_name = 'genre_film_Work'
         self.compare(table_name)
 
+    def test_table_content_genre(self):
+
+        table_name = 'genre'
+        # получить порцию данных их sqlite
+        query_text = "SELECT * FROM " + table_name + ";"
+        self.sqlite_curs.execute(query_text)
+        n = 100
+        while True:
+            rows = self.sqlite_curs.fetchmany(n)
+            if rows:
+                for row in rows:
+                    psql_query_text = '''
+                        SELECT * FROM content.genre
+                        WHERE id = %(id)s
+                            AND name = %(name)s
+                            AND  description = %(description)s
+                            AND  created_at = %(created_at)s
+                            AND  updated_at = %(updated_at)s
+                            '''
+
+                    self.p_curs.execute(psql_query_text,
+                                        {'id': row['id'],
+                                         'name': row['name'],
+                                         'description': (row['description'] if row['description'] is not None else ''),
+                                         'created_at': parse(row['created_at']),
+                                         'updated_at': parse(row['updated_at'])})
+                    p_rows = self.p_curs.fetchall();
+                    self.assertEqual(1, len(p_rows))
+            else:
+                break
+
+        # есди количество записей = 1, то тест пройден
+        # сравнить массив данных?
+
 
 def get_environment_var():
     os.chdir('../..')
@@ -83,21 +118,6 @@ def get_environment_var():
 
     return env_var
 
-
-@contextmanager
-def conn_context(db_path: str):
-    # Устанавливаем соединение с БД
-    try:
-        conn = sqlite3.connect(db_path)
-        # По-умолчанию SQLite возвращает строки в виде кортежа значений.
-        # Эта строка указывает, что данные должны быть в формате "ключ-значение"
-        conn.row_factory = sqlite3.Row
-        yield conn
-    except sqlite3.Error as error:
-        print('Ошибка соединения с sqlite', error)
-    finally:
-        if conn:
-            conn.close()
 
 if __name__ == "__main__":
     unittest.main()

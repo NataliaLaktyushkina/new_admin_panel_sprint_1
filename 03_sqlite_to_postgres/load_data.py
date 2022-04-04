@@ -11,6 +11,8 @@ from psycopg2.extras import DictCursor
 from contextlib import contextmanager
 from dotenv import load_dotenv
 
+PAGE_SIZE = 1000
+
 
 @dataclass
 class FilmWork:
@@ -27,10 +29,12 @@ class FilmWork:
 
 @dataclass
 class Genre:
+
     name: str
     description: field(default_factory='')
     created_at: str
     modified_at: str
+
     id: uuid.UUID = field(default_factory=uuid.uuid4)
 
 
@@ -74,107 +78,160 @@ def create_tables_list():
 def get_data_from_table(curs, pg_conn, table):
 
     try:
-        query_text = "SELECT * FROM " + table + ";"
-        curs.execute(query_text)
+        p_curs = pg_conn.cursor()
+        truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
+        p_curs.execute(truncate_query)
 
+    except psycopg2.Error as error:
+        print('Ошибка сокращения таблицы ', table, error)
+
+    if table == 'genre':
         try:
-            p_curs = pg_conn.cursor()
-            truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
-            p_curs.execute(truncate_query)
+            query_text = "SELECT name, description, created_at, updated_at, id  FROM " + table + ";"
+            curs.execute(query_text)
 
-            n = 100
             k = 0
             while True:
-                rows = curs.fetchmany(n)
-                if rows:
-                    generate_list_objects(p_curs, table, rows)
-                    k += len(rows)
+                genres = [Genre(*row) for row in curs.fetchall()]
+                if len(genres):
+                    data = modify_genres(genres)
+                    save_data_to_table_genre(p_curs, data)
+                    k += len(genres)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
-        except psycopg2.Error as error:
-            print('Ошибка сокращения таблицы ', table,  error)
+        except sqlite3.Error as error:
+            print('Ошибка чтения данных, таблица ', table, error)
+    elif table == 'person':
+        try:
+            query_text = "SELECT full_name, created_at, updated_at, id  FROM " + table + ";"
+            curs.execute(query_text)
 
-    except sqlite3.Error as error:
-        print('Ошибка чтения данных ', error)
+            k = 0
+            while True:
+                persons = [Person(*row) for row in curs.fetchall()]
+                if len(persons):
+                    data = modify_persons(persons)
+                    save_data_to_table_person(p_curs, data)
+                    k += len(persons)
+                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                else:
+                    break
+
+        except sqlite3.Error as error:
+            print('Ошибка чтения данных, таблица ', table, error)
+    elif table == 'film_work':
+        try:
+            query_text = '''
+                SELECT 
+                    title, description, creation_date, created_at, updated_at, file_path, type, rating, id
+                FROM ''' + table + ";"
+            curs.execute(query_text)
+
+            k = 0
+            while True:
+                films = [FilmWork(*row) for row in curs.fetchall()]
+                if len(films):
+                    data = modify_films(films)
+                    save_data_to_table_film_work(p_curs, data)
+                    k += len(films)
+                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                else:
+                    break
+
+        except sqlite3.Error as error:
+            print('Ошибка чтения данных, таблица ', table, error)
+    elif table == 'genre_film_work':
+        try:
+            query_text = "SELECT film_work_id, genre_id, created_at, id  FROM " + table + ";"
+            curs.execute(query_text)
+
+            k = 0
+            while True:
+                genre_films = [GenreFilmWork(*row) for row in curs.fetchall()]
+                if len(genre_films):
+                    data = modify_genre_films(genre_films)
+                    save_data_to_table_genre_film_work(p_curs, data)
+                    k += len(genre_films)
+                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                else:
+                    break
+
+        except sqlite3.Error as error:
+            print('Ошибка чтения данных, таблица ', table, error)
+    elif table == 'person_film_work':
+        try:
+            query_text = "SELECT film_work_id, person_id, role, created_at, id  FROM " + table + ";"
+            curs.execute(query_text)
+
+            k = 0
+            while True:
+                person_films = [PersonFilmWork(*row) for row in curs.fetchall()]
+                if len(person_films):
+                    data = modify_person_films(person_films)
+                    save_data_to_table_person_film_work(p_curs, data)
+                    k += len(person_films)
+                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                else:
+                    break
+
+        except sqlite3.Error as error:
+            print('Ошибка чтения данных, таблица ', table, error)
 
 
-def generate_list_objects(p_curs, table_name, data):
-    if table_name == 'genre':
-        data = generate_genres(data)
-        for element in data:
-            save_data_to_table_genre(p_curs, element)
-    elif table_name == 'person':
-        data = generate_persons(data)
-        for element in data:
-            save_data_to_table_person(p_curs, element)
-    elif table_name == 'film_work':
-        data = generate_films(data)
-        for element in data:
-            save_data_to_table_film_work(p_curs, element)
-    elif table_name == 'genre_film_work':
-        data = generate_genre_film_work(data)
-        for element in data:
-            save_data_to_table_genre_film_work(p_curs, element)
-    elif table_name == 'person_film_work':
-        data = generate_person_film_work(data)
-        for element in data:
-            save_data_to_table_person_film_work(p_curs, element)
+def modify_genres(genres):
 
-
-def generate_genres(data):
-    genres = list()
-    for row in data:
-        genre = Genre(name=row['name'],
-                      description=row['description'],
-                      created_at=row['created_at'],
-                      modified_at=row['updated_at'],
-                      id=row['id'])
+    for genre in genres:
         if genre.description is None:
             genre.description = ''
-        genre.created_at = parse(genre.created_at)
-        genre.modified_at = parse(genre.modified_at)
-        genres.append(genre)
+        if genre.created_at is not None:
+            genre.created_at = parse(genre.created_at)
+        if genre.modified_at is not None:
+            genre.modified_at = parse(genre.modified_at)
     return genres
 
 
-def save_data_to_table_genre(p_curs: _connection.cursor, genre: Genre):
+def save_data_to_table_genre(p_curs: _connection.cursor, genres: Genre):
 
     insert_query = '''
         INSERT INTO content.genre
             (id, name, description, created_at, updated_at)
         VALUES (%(id)s, %(name)s, %(description)s, %(created_at)s, %(modified_at)s)
+       
         ON CONFLICT (id)
             DO UPDATE SET  
                 (name, description, created_at, updated_at) =  
                 (EXCLUDED.name, EXCLUDED.description, EXCLUDED.created_at, EXCLUDED.updated_at) 
         '''
+
+    insert_data = []
+    for genre in genres:
+        insert_data.append({'id': genre.id,
+                            'name': genre.name,
+                            'description': genre.description,
+                            'created_at': genre.created_at,
+                            'modified_at': genre.modified_at})
     try:
-        p_curs.execute(insert_query, {'id': genre.id,
-                                  'name': genre.name,
-                                  'description': genre.description,
-                                  'created_at': genre.created_at,
-                                  'modified_at': genre.modified_at})
+
+        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
+        pg_conn.commit()
+
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу genre', error)
 
 
-def generate_persons(data):
-    persons = list()
-    for row in data:
-        person = Person(full_name=row['full_name'],
-                        created_at=row['created_at'],
-                        modified_at=row['updated_at'],
-                        id=row['id'])
+def modify_persons(persons):
+    for person in persons:
         person.full_name = person.full_name.replace("'", "''")
-        person.created_at = parse(person.created_at)
-        person.modified_at = parse(person.modified_at)
-        persons.append(person)
+        if person.created_at is not None:
+            person.created_at = parse(person.created_at)
+        if person.modified_at is not None:
+            person.modified_at = parse(person.modified_at)
     return persons
 
 
-def save_data_to_table_person(p_curs: _connection.cursor, person: Person):
+def save_data_to_table_person(p_curs: _connection.cursor, persons: Person):
 
     insert_query = '''
         INSERT INTO content.person
@@ -187,29 +244,24 @@ def save_data_to_table_person(p_curs: _connection.cursor, person: Person):
                 (full_name, created_at, updated_at) =  
                 (EXCLUDED.full_name, EXCLUDED.created_at, EXCLUDED.updated_at) 
         '''
+
+    insert_data = []
+    for person in persons:
+        insert_data.append({'id': person.id,
+                            'full_name': person.full_name,
+                            'created_at': person.created_at,
+                            'modified_at': person.modified_at})
     try:
-        p_curs.execute(insert_query, {'id': person.id,
-                                  'full_name': person.full_name,
-                                  'created_at': person.created_at,
-                                  'modified_at': person.modified_at})
+        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
+        pg_conn.commit()
+
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу person', error)
 
 
-def generate_films(data):
+def modify_films(films):
 
-    films = list()
-    for row in data:
-        film = FilmWork(title=row['title'],
-                        description=row['description'],
-                        creation_date=row['creation_date'],
-                        created_at=row['created_at'],
-                        modified_at=row['updated_at'],
-                        file_path=row['file_path'],
-                        rating=row['rating'],
-                        type=row['type'],
-                        id=row['id'])
-
+    for film in films:
         film.title = film.title.replace("'", "''")
 
         if film.description is not None:
@@ -228,12 +280,10 @@ def generate_films(data):
         else:
             film.modified_at = datetime.datetime.now()
 
-        films.append(film)
-
     return films
 
 
-def save_data_to_table_film_work(p_curs: _connection.cursor, film: FilmWork):
+def save_data_to_table_film_work(p_curs: _connection.cursor, films: FilmWork):
 
     insert_query = '''
         INSERT INTO content.film_work 
@@ -252,36 +302,34 @@ def save_data_to_table_film_work(p_curs: _connection.cursor, film: FilmWork):
             EXCLUDED.created_at, EXCLUDED.updated_at ) 
         '''
 
+    insert_data = []
+    for film in films:
+        insert_data.append({'id': film.id,
+                            'title': film.title,
+                            'description': film.description,
+                            'file_path': film.file_path,
+                            'rating': film.rating,
+                            'type': film.type,
+                            'creation_date': film.creation_date,
+                            'created_at': film.created_at,
+                            'modified_at': film.modified_at})
     try:
-        p_curs.execute(insert_query, {'id': film.id,
-                                  'title': film.title,
-                                  'description': film.description,
-                                  'file_path': film.file_path,
-                                  'rating': film.rating,
-                                  'type': film.type,
-                                  'creation_date': film.creation_date,
-                                  'created_at': film.created_at,
-                                  'modified_at': film.modified_at})
+        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
+        pg_conn.commit()
+
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу film_work', error)
 
 
-def generate_genre_film_work(data):
-    relations_genre_film = list()
-    for row in data:
-        genre_film = GenreFilmWork(film_work_id=row['film_work_id'],
-                                   genre_id=row['genre_id'],
-                                   created_at=row['created_at'],
-                                   id=row['id'])
+def modify_genre_films(genre_films):
+    for genre_film in genre_films:
+        if genre_film.created_at is not None:
+            genre_film.created_at = parse(genre_film.created_at)
 
-        genre_film.created_at = parse(genre_film.created_at)
-
-        relations_genre_film.append(genre_film)
-
-    return relations_genre_film
+    return genre_films
 
 
-def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_film: GenreFilmWork):
+def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_films: GenreFilmWork):
 
     insert_query = '''
         INSERT INTO content.genre_film_work
@@ -293,32 +341,30 @@ def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_film: G
                 (film_work_id, genre_id, created) =  
                 (EXCLUDED.film_work_id, EXCLUDED.genre_id, EXCLUDED.created)
             '''
+    insert_data = []
+    for genre_film in genre_films:
+        insert_data.append({'id': genre_film.id,
+                            'film_work_id': genre_film.film_work_id,
+                            'genre_id': genre_film.genre_id,
+                            'created_at': genre_film.created_at})
     try:
-        p_curs.execute(insert_query, {'id': genre_film.id,
-                                  'film_work_id': genre_film.film_work_id,
-                                  'genre_id': genre_film.genre_id,
-                                  'created_at': genre_film.created_at})
+        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
+        pg_conn.commit()
+
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу genre_film_work', error)
 
 
-def generate_person_film_work(data):
+def modify_person_films(person_films):
 
-    relations_person_film = list()
-    for row in data:
-        person_film = PersonFilmWork(film_work_id=row['film_work_id'],
-                                     person_id=row['person_id'],
-                                     role=row['role'],
-                                     created_at=row['created_at'],
-                                     id=row['id'])
+    for person_film in person_films:
+        if person_film.created_at is not None:
+            person_film.created_at = parse(person_film.created_at)
 
-        person_film.created_at = parse(person_film.created_at)
-        relations_person_film.append(person_film)
-
-    return relations_person_film
+    return person_films
 
 
-def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_film: PersonFilmWork):
+def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_films: PersonFilmWork):
 
     insert_query = '''
         INSERT INTO content.person_film_work
@@ -330,12 +376,17 @@ def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_film:
                 (EXCLUDED.film_work_id, EXCLUDED.person_id, EXCLUDED.role, EXCLUDED.created)           
         '''
 
+    insert_data = []
+    for person_film in person_films:
+        insert_data.append({'id': person_film.id,
+                            'film_work_id': person_film.film_work_id,
+                            'person_id': person_film.person_id,
+                            'role': person_film.role,
+                            'created_at': person_film.created_at})
     try:
-        p_curs.execute(insert_query, {'id': person_film.id,
-                                  'film_work_id': person_film.film_work_id,
-                                  'person_id': person_film.person_id,
-                                  'role': person_film.role,
-                                  'created_at': person_film.created_at})
+        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
+        pg_conn.commit()
+
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу person_film_work', error)
 

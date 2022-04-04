@@ -74,9 +74,8 @@ class TestLoadingData(unittest.TestCase):
         query_text = "SELECT * FROM genre"
         self.sqlite_curs.execute(query_text)
 
-        n = 100
         while True:
-            rows = self.sqlite_curs.fetchmany(n)
+            rows = self.sqlite_curs.fetchall()
             if rows:
                 for row in rows:
 
@@ -106,9 +105,8 @@ class TestLoadingData(unittest.TestCase):
         query_text = "SELECT * FROM person"
         self.sqlite_curs.execute(query_text)
 
-        n = 100
         while True:
-            rows = self.sqlite_curs.fetchmany(n)
+            rows = self.sqlite_curs.fetchall()
             if rows:
                 for row in rows:
                     psql_query_text = '''
@@ -130,18 +128,122 @@ class TestLoadingData(unittest.TestCase):
             else:
                 break
 
+    def test_table_content_films(self):
+
+        query_text = "SELECT * FROM film_work"
+        self.sqlite_curs.execute(query_text)
+
+        while True:
+            rows = self.sqlite_curs.fetchall()
+            if rows:
+                for row in rows:
+                    psql_query_text = '''
+                           SELECT * FROM content.film_work
+                           WHERE id = %(id)s
+                               AND title = %(title)s
+                               AND type = %(type)s
+                               AND created_at = %(created_at)s
+                               AND updated_at = %(updated_at)s'''
+
+                    if row['rating'] is None:
+                        psql_query_text = psql_query_text + ' AND rating is NULL'
+                    else:
+                        psql_query_text = psql_query_text + ' AND rating = %(rating)s'
+                    if row['description'] is None:
+                        psql_query_text  = psql_query_text + ' AND description IS NULL'
+                    else:
+                        psql_query_text = psql_query_text + ' AND description = %(description)s'
+                    if row['creation_date'] is None:
+                        psql_query_text = psql_query_text + ' AND creation_date IS NULL'
+                    else:
+                        psql_query_text = psql_query_text + ' AND creation_date = %(creation_date)s'
+                    if row['file_path'] is None:
+                        psql_query_text = psql_query_text + ' AND file_path IS NULL'
+                    else:
+                        psql_query_text = psql_query_text + ' AND file_path = % (file_path)s'
+
+                    self.p_curs.execute(psql_query_text,
+                                        {'id': row['id'],
+                                         'title': row['title'].replace("'", "''"),
+                                         'description': (row['description'] if  row['description'] is None else row['description'].replace("'", "''")),
+                                         'creation_date': row['creation_date'],
+                                         'rating': row['rating'],
+                                         'type': row['type'],
+                                         'file_path': row['file_path'],
+                                         'created_at': ('' if row['created_at'] is None else parse(row['created_at'])),
+                                         'updated_at': ('' if row['updated_at'] is None else parse(row['updated_at']))})
+
+                    p_rows = self.p_curs.fetchall();
+                    self.assertEqual(1, len(p_rows), msg='title = ' + row['title'])
+            else:
+                break
+
+    def test_table_content_genre_film(self):
+
+        query_text = "SELECT * FROM genre_film_work"
+        self.sqlite_curs.execute(query_text)
+
+        while True:
+            rows = self.sqlite_curs.fetchall()
+            if rows:
+                for row in rows:
+                    psql_query_text = '''
+                           SELECT * FROM content.genre_film_work
+                           WHERE id = %(id)s
+                               AND genre_id = %(genre_id)s
+                               AND  film_work_id = %(film_work_id)s
+                               AND  created = %(created)s
+                               '''
+
+                    self.p_curs.execute(psql_query_text,
+                                        {'id': row['id'],
+                                         'genre_id': row['genre_id'],
+                                         'film_work_id': row['film_work_id'],
+                                         'created': parse(row['created_at'])})
+
+                    p_rows = self.p_curs.fetchall();
+                    self.assertEqual(1, len(p_rows), msg='id = ' + row['id'])
+            else:
+                break
+
+    def test_table_content_person_film(self):
+
+        query_text = "SELECT * FROM person_film_work"
+        self.sqlite_curs.execute(query_text)
+
+        while True:
+            rows = self.sqlite_curs.fetchall()
+            if rows:
+                for row in rows:
+                    psql_query_text = '''
+                           SELECT * FROM content.person_film_work
+                           WHERE id = %(id)s
+                               AND film_work_id = %(film_work_id)s
+                               AND person_id = %(person_id)s
+                               AND role = %(role)s
+                               AND created = %(created)s
+                               '''
+
+                    self.p_curs.execute(psql_query_text,
+                                        {'id': row['id'],
+                                         'film_work_id': row['film_work_id'],
+                                         'person_id': row['person_id'],
+                                         'role': row['role'],
+                                         'created': parse(row['created_at'])})
+
+                    p_rows = self.p_curs.fetchall();
+                    self.assertEqual(1, len(p_rows), msg='id = ' + row['id'])
+            else:
+                break
+
 
 def get_environment_var():
     os.chdir('../..')
     dotenv_path = os.path.join(os.getcwd(), '.env')
     load_dotenv(dotenv_path)
-    env_var = {}
-    env_var['db_name'] = os.environ.get('DB_NAME')
-    env_var['user'] = os.environ.get('USER_APP')
-    env_var['password'] = os.environ.get('PASSWORD')
-    env_var['host'] = os.environ.get('HOST')
-    env_var['port'] = os.environ.get('PORT')
-    env_var['db_path'] = os.environ.get('DB_PATH'),
+    env_var = {'db_name': os.environ.get('DB_NAME'), 'user': os.environ.get('USER_APP'),
+               'password': os.environ.get('PASSWORD'), 'host': os.environ.get('HOST'), 'port': os.environ.get('PORT'),
+               'db_path': (os.environ.get('DB_PATH'),)}
 
     return env_var
 

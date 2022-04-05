@@ -59,7 +59,6 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
                                  validators=[MinValueValidator(0),
                                            MaxValueValidator(100)])
     type = models.CharField(_('type'), max_length=100, default='movie', choices=FilmTypes.choices)
-    #  type = models.TextChoices('movie', 'tv_show')
     genres = models.ManyToManyField(Genre, through='GenreFilmwork')
 
     class Meta:

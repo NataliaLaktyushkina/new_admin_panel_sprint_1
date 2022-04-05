@@ -78,9 +78,10 @@ def create_tables_list():
 def get_data_from_table(curs, pg_conn, table):
 
     try:
-        p_curs = pg_conn.cursor()
-        truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
-        p_curs.execute(truncate_query)
+        with pg_conn.cursor() as p_curs:
+        # p_curs = pg_conn.cursor()
+            truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
+            p_curs.execute(truncate_query)
 
     except psycopg2.Error as error:
         print('Ошибка сокращения таблицы ', table, error)
@@ -95,7 +96,7 @@ def get_data_from_table(curs, pg_conn, table):
                 genres = [Genre(*row) for row in curs.fetchall()]
                 if len(genres):
                     data = modify_genres(genres)
-                    save_data_to_table_genre(p_curs, data)
+                    save_data_to_table_genre(pg_conn, data)
                     k += len(genres)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
@@ -113,7 +114,7 @@ def get_data_from_table(curs, pg_conn, table):
                 persons = [Person(*row) for row in curs.fetchall()]
                 if len(persons):
                     data = modify_persons(persons)
-                    save_data_to_table_person(p_curs, data)
+                    save_data_to_table_person(pg_conn, data)
                     k += len(persons)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
@@ -134,7 +135,7 @@ def get_data_from_table(curs, pg_conn, table):
                 films = [FilmWork(*row) for row in curs.fetchall()]
                 if len(films):
                     data = modify_films(films)
-                    save_data_to_table_film_work(p_curs, data)
+                    save_data_to_table_film_work(pg_conn, data)
                     k += len(films)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
@@ -152,7 +153,7 @@ def get_data_from_table(curs, pg_conn, table):
                 genre_films = [GenreFilmWork(*row) for row in curs.fetchall()]
                 if len(genre_films):
                     data = modify_genre_films(genre_films)
-                    save_data_to_table_genre_film_work(p_curs, data)
+                    save_data_to_table_genre_film_work(pg_conn, data)
                     k += len(genre_films)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
@@ -170,7 +171,7 @@ def get_data_from_table(curs, pg_conn, table):
                 person_films = [PersonFilmWork(*row) for row in curs.fetchall()]
                 if len(person_films):
                     data = modify_person_films(person_films)
-                    save_data_to_table_person_film_work(p_curs, data)
+                    save_data_to_table_person_film_work(pg_conn, data)
                     k += len(person_films)
                     print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
@@ -192,7 +193,7 @@ def modify_genres(genres):
     return genres
 
 
-def save_data_to_table_genre(p_curs: _connection.cursor, genres: Genre):
+def save_data_to_table_genre(pg_conn: _connection, genres: Genre):
 
     insert_query = '''
         INSERT INTO content.genre
@@ -213,9 +214,8 @@ def save_data_to_table_genre(p_curs: _connection.cursor, genres: Genre):
                             'created_at': genre.created_at,
                             'modified_at': genre.modified_at})
     try:
-
-        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
-        pg_conn.commit()
+        with pg_conn.cursor() as p_curs:
+            psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу genre', error)
@@ -231,7 +231,7 @@ def modify_persons(persons):
     return persons
 
 
-def save_data_to_table_person(p_curs: _connection.cursor, persons: Person):
+def save_data_to_table_person(pg_conn: _connection, persons: Person):
 
     insert_query = '''
         INSERT INTO content.person
@@ -252,8 +252,8 @@ def save_data_to_table_person(p_curs: _connection.cursor, persons: Person):
                             'created_at': person.created_at,
                             'modified_at': person.modified_at})
     try:
-        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
-        pg_conn.commit()
+        with pg_conn.cursor() as p_curs:
+            psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу person', error)
@@ -283,7 +283,7 @@ def modify_films(films):
     return films
 
 
-def save_data_to_table_film_work(p_curs: _connection.cursor, films: FilmWork):
+def save_data_to_table_film_work(pg_conn: _connection, films: FilmWork):
 
     insert_query = '''
         INSERT INTO content.film_work 
@@ -314,8 +314,8 @@ def save_data_to_table_film_work(p_curs: _connection.cursor, films: FilmWork):
                             'created_at': film.created_at,
                             'modified_at': film.modified_at})
     try:
-        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
-        pg_conn.commit()
+        with pg_conn.cursor() as p_curs:
+            psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу film_work', error)
@@ -329,7 +329,7 @@ def modify_genre_films(genre_films):
     return genre_films
 
 
-def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_films: GenreFilmWork):
+def save_data_to_table_genre_film_work(pg_conn: _connection, genre_films: GenreFilmWork):
 
     insert_query = '''
         INSERT INTO content.genre_film_work
@@ -348,8 +348,8 @@ def save_data_to_table_genre_film_work(p_curs: _connection.cursor, genre_films: 
                             'genre_id': genre_film.genre_id,
                             'created_at': genre_film.created_at})
     try:
-        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
-        pg_conn.commit()
+        with pg_conn.cursor() as p_curs:
+            psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу genre_film_work', error)
@@ -364,7 +364,7 @@ def modify_person_films(person_films):
     return person_films
 
 
-def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_films: PersonFilmWork):
+def save_data_to_table_person_film_work(pg_conn: _connection, person_films: PersonFilmWork):
 
     insert_query = '''
         INSERT INTO content.person_film_work
@@ -384,8 +384,8 @@ def save_data_to_table_person_film_work(p_curs: _connection.cursor, person_films
                             'role': person_film.role,
                             'created_at': person_film.created_at})
     try:
-        psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
-        pg_conn.commit()
+        with pg_conn.cursor() as p_curs:
+            psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
         print('Ошибка записи данных в таблицу person_film_work', error)
@@ -443,3 +443,4 @@ if __name__ == '__main__':
 
     with conn_context(db_path[0]) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
         load_from_sqlite(sqlite_conn, pg_conn)
+    pg_conn.close()

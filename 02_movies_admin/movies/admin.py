@@ -35,13 +35,3 @@ class FilmWorkAdmin(admin.ModelAdmin):
 
     # Поиск по полям
     search_fields = ('title', 'description', 'id')
-
-
-#@admin.register(GenreFilmwork)
-#class GenreFilmworkAdmin(admin.ModelAdmin):
-#    pass
-
-
-#@admin.register(PersonFilmWork)
-#class PersonFilmWorkAdmin(admin.ModelAdmin):
-#    pass

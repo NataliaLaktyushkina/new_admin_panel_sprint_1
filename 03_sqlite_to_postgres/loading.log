@@ -1,0 +1,16 @@
+INFO:root:Таблица: film_work обработано: 999 строк
+INFO:root:Таблица: genre обработано: 26 строк
+INFO:root:Таблица: genre_film_work обработано: 1000 строк
+INFO:root:Таблица: genre_film_work обработано: 2000 строк
+INFO:root:Таблица: genre_film_work обработано: 2231 строк
+INFO:root:Таблица: person обработано: 1000 строк
+INFO:root:Таблица: person обработано: 2000 строк
+INFO:root:Таблица: person обработано: 3000 строк
+INFO:root:Таблица: person обработано: 4000 строк
+INFO:root:Таблица: person обработано: 4166 строк
+INFO:root:Таблица: person_film_work обработано: 1000 строк
+INFO:root:Таблица: person_film_work обработано: 2000 строк
+INFO:root:Таблица: person_film_work обработано: 3000 строк
+INFO:root:Таблица: person_film_work обработано: 4000 строк
+INFO:root:Таблица: person_film_work обработано: 5000 строк
+INFO:root:Таблица: person_film_work обработано: 5783 строк

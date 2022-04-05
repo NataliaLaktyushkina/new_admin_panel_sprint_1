@@ -1,4 +1,5 @@
 import datetime
+import logging
 import sqlite3
 import os
 import psycopg2
@@ -84,7 +85,7 @@ def get_data_from_table(curs, pg_conn, table):
             p_curs.execute(truncate_query)
 
     except psycopg2.Error as error:
-        print('Ошибка сокращения таблицы ', table, error)
+        logging.error('Ошибка сокращения таблицы ', table, error)
 
     if table == 'genre':
         try:
@@ -98,12 +99,12 @@ def get_data_from_table(curs, pg_conn, table):
                     data = modify_genres(genres)
                     save_data_to_table_genre(pg_conn, data)
                     k += len(genres)
-                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                    logging.info(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
         except sqlite3.Error as error:
-            print('Ошибка чтения данных, таблица ', table, error)
+            logging.error('Ошибка чтения данных, таблица ', table, error)
     elif table == 'person':
         try:
             query_text = "SELECT full_name, created_at, updated_at, id  FROM " + table + ";"
@@ -116,12 +117,12 @@ def get_data_from_table(curs, pg_conn, table):
                     data = modify_persons(persons)
                     save_data_to_table_person(pg_conn, data)
                     k += len(persons)
-                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                    logging.info(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
         except sqlite3.Error as error:
-            print('Ошибка чтения данных, таблица ', table, error)
+            logging.error('Ошибка чтения данных, таблица ', table, error)
     elif table == 'film_work':
         try:
             query_text = '''
@@ -137,12 +138,12 @@ def get_data_from_table(curs, pg_conn, table):
                     data = modify_films(films)
                     save_data_to_table_film_work(pg_conn, data)
                     k += len(films)
-                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                    logging.info(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
         except sqlite3.Error as error:
-            print('Ошибка чтения данных, таблица ', table, error)
+            logging.error('Ошибка чтения данных, таблица ', table, error)
     elif table == 'genre_film_work':
         try:
             query_text = "SELECT film_work_id, genre_id, created_at, id  FROM " + table + ";"
@@ -155,12 +156,12 @@ def get_data_from_table(curs, pg_conn, table):
                     data = modify_genre_films(genre_films)
                     save_data_to_table_genre_film_work(pg_conn, data)
                     k += len(genre_films)
-                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                    logging.info(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
         except sqlite3.Error as error:
-            print('Ошибка чтения данных, таблица ', table, error)
+            logging.error('Ошибка чтения данных, таблица ', table, error)
     elif table == 'person_film_work':
         try:
             query_text = "SELECT film_work_id, person_id, role, created_at, id  FROM " + table + ";"
@@ -173,12 +174,12 @@ def get_data_from_table(curs, pg_conn, table):
                     data = modify_person_films(person_films)
                     save_data_to_table_person_film_work(pg_conn, data)
                     k += len(person_films)
-                    print(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
+                    logging.info(' '.join(('Таблица:', table, 'обработано:', str(k), 'строк')))
                 else:
                     break
 
         except sqlite3.Error as error:
-            print('Ошибка чтения данных, таблица ', table, error)
+            logging.error('Ошибка чтения данных, таблица ', table, error)
 
 
 def modify_genres(genres):
@@ -218,7 +219,7 @@ def save_data_to_table_genre(pg_conn: _connection, genres: Genre):
             psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
-        print('Ошибка записи данных в таблицу genre', error)
+        logging.error('Ошибка записи данных в таблицу genre', error)
 
 
 def modify_persons(persons):
@@ -256,7 +257,7 @@ def save_data_to_table_person(pg_conn: _connection, persons: Person):
             psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
-        print('Ошибка записи данных в таблицу person', error)
+        logging.error('Ошибка записи данных в таблицу person', error)
 
 
 def modify_films(films):
@@ -318,7 +319,7 @@ def save_data_to_table_film_work(pg_conn: _connection, films: FilmWork):
             psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
-        print('Ошибка записи данных в таблицу film_work', error)
+        logging.error('Ошибка записи данных в таблицу film_work', error)
 
 
 def modify_genre_films(genre_films):
@@ -352,7 +353,7 @@ def save_data_to_table_genre_film_work(pg_conn: _connection, genre_films: GenreF
             psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
-        print('Ошибка записи данных в таблицу genre_film_work', error)
+        logging.error('Ошибка записи данных в таблицу genre_film_work', error)
 
 
 def modify_person_films(person_films):
@@ -388,7 +389,7 @@ def save_data_to_table_person_film_work(pg_conn: _connection, person_films: Pers
             psycopg2.extras.execute_batch(p_curs, insert_query, insert_data, page_size=PAGE_SIZE)
 
     except psycopg2.Error as error:
-        print('Ошибка записи данных в таблицу person_film_work', error)
+        logging.error('Ошибка записи данных в таблицу person_film_work', error)
 
 
 def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
@@ -409,7 +410,7 @@ def conn_context(db_path: str):
         conn.row_factory = sqlite3.Row
         yield conn
     except sqlite3.Error as error:
-        print('Ошибка соединения с sqlite', error)
+        logging.error('Ошибка соединения с sqlite', error)
     finally:
         if conn:
             conn.close()
@@ -440,6 +441,9 @@ if __name__ == '__main__':
            'port': env_var['port']}
 
     db_path = env_var['db_path']
+
+    logging.basicConfig(filename='loading.log', filemode='w')
+    logging.root.setLevel(logging.NOTSET)
 
     with conn_context(db_path[0]) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
         load_from_sqlite(sqlite_conn, pg_conn)

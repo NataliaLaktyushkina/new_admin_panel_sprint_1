@@ -98,9 +98,15 @@ class Person(UUIDMixin, TimeStampedMixin):
 
 
 class PersonFilmWork(UUIDMixin):
+
+    class Roles (models.TextChoices):
+        actor = 'A', _('Actor')
+        director = 'D', _('Director')
+        writer = 'W', _('Writer')
+
     film_work = models.ForeignKey('Filmwork', on_delete=models.CASCADE)
     person = models.ForeignKey('Person', on_delete=models.CASCADE)
-    role = models.TextField('role', null=True)
+    role = models.CharField(_('role'), max_length=100, default='', choices=Roles.choices, null=True)
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

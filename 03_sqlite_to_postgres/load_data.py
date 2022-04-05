@@ -93,7 +93,7 @@ def get_data_from_table(curs, pg_conn, table):
 
             k = 0
             while True:
-                genres = [Genre(*row) for row in curs.fetchall()]
+                genres = [Genre(*row) for row in curs.fetchmany(PAGE_SIZE)]
                 if len(genres):
                     data = modify_genres(genres)
                     save_data_to_table_genre(pg_conn, data)
@@ -111,7 +111,7 @@ def get_data_from_table(curs, pg_conn, table):
 
             k = 0
             while True:
-                persons = [Person(*row) for row in curs.fetchall()]
+                persons = [Person(*row) for row in curs.fetchmany(PAGE_SIZE)]
                 if len(persons):
                     data = modify_persons(persons)
                     save_data_to_table_person(pg_conn, data)
@@ -132,7 +132,7 @@ def get_data_from_table(curs, pg_conn, table):
 
             k = 0
             while True:
-                films = [FilmWork(*row) for row in curs.fetchall()]
+                films = [FilmWork(*row) for row in curs.fetchmany(PAGE_SIZE)]
                 if len(films):
                     data = modify_films(films)
                     save_data_to_table_film_work(pg_conn, data)
@@ -150,7 +150,7 @@ def get_data_from_table(curs, pg_conn, table):
 
             k = 0
             while True:
-                genre_films = [GenreFilmWork(*row) for row in curs.fetchall()]
+                genre_films = [GenreFilmWork(*row) for row in curs.fetchmany(PAGE_SIZE)]
                 if len(genre_films):
                     data = modify_genre_films(genre_films)
                     save_data_to_table_genre_film_work(pg_conn, data)
@@ -168,7 +168,7 @@ def get_data_from_table(curs, pg_conn, table):
 
             k = 0
             while True:
-                person_films = [PersonFilmWork(*row) for row in curs.fetchall()]
+                person_films = [PersonFilmWork(*row) for row in curs.fetchmany(PAGE_SIZE)]
                 if len(person_films):
                     data = modify_person_films(person_films)
                     save_data_to_table_person_film_work(pg_conn, data)

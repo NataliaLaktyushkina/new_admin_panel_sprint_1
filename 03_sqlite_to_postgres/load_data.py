@@ -396,9 +396,7 @@ def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
     tables_list = create_tables_list()
 
     for table_name in tables_list:
-        # data = get_data_from_table(curs, table_name)
         get_data_from_table(curs, pg_conn, table_name)
-        # save_table_to_postgres(pg_conn, table_name, data)
 
 
 @contextmanager

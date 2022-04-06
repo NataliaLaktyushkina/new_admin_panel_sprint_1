@@ -38,6 +38,40 @@ class Genre(UUIDMixin, TimeStampedMixin):
         verbose_name_plural = 'Жанры'
 
 
+class PersonFilmWork(UUIDMixin):
+
+    class Roles(models.TextChoices):
+        actor = 'A', _('Actor')
+        director = 'D', _('Director')
+        writer = 'W', _('Writer')
+
+    film_work = models.ForeignKey('Filmwork', on_delete=models.CASCADE)
+    person = models.ForeignKey('Person', on_delete=models.CASCADE)
+    role = models.CharField(_('role'), max_length=100, default='', choices=Roles.choices, null=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "content\".\"person_film_work"
+        constraints = [
+            models.UniqueConstraint(fields=['film_work_id', 'person_id', 'role'], name='film_work_person_role_idx'),
+        ]
+
+
+class Person(UUIDMixin, TimeStampedMixin):
+
+    def __str__(self):
+        return self.full_name
+
+    full_name = models.CharField(_('full_name'), max_length=255)
+
+    # Если нам нужно добавить данные о самой модели, мы используем класс Meta.
+    class Meta:
+        # Ваши таблицы находятся в нестандартной схеме. Это нужно указать в классе модели
+        db_table = "content\".\"person"
+        verbose_name = 'Актер'
+        verbose_name_plural = 'Актеры'
+
+
 class FilmWork(UUIDMixin, TimeStampedMixin):
 
     def __str__(self):
@@ -57,9 +91,11 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
     rating = models.DecimalField(_('rating'), blank=True, default=0,
                                  max_digits=4, decimal_places=1,
                                  validators=[MinValueValidator(0),
-                                           MaxValueValidator(100)])
+                                             MaxValueValidator(100)])
     type = models.CharField(_('type'), max_length=100, default='movie', choices=FilmTypes.choices)
     genres = models.ManyToManyField(Genre, through='GenreFilmwork')
+    persons = models.ManyToManyField(Person, through='PersonFilmWork')
+
 
     class Meta:
         # Ваши таблицы находятся в нестандартной схеме. Это нужно указать в классе модели
@@ -81,36 +117,3 @@ class GenreFilmwork(UUIDMixin):
         ]
 
 
-
-class Person(UUIDMixin, TimeStampedMixin):
-
-    def __str__(self):
-        return self.full_name
-
-    full_name = models.CharField(_('full_name'), max_length=255)
-
-    # Если нам нужно добавить данные о самой модели, мы используем класс Meta.
-    class Meta:
-        # Ваши таблицы находятся в нестандартной схеме. Это нужно указать в классе модели
-        db_table = "content\".\"person"
-        verbose_name = 'Актер'
-        verbose_name_plural = 'Актеры'
-
-
-class PersonFilmWork(UUIDMixin):
-
-    class Roles (models.TextChoices):
-        actor = 'A', _('Actor')
-        director = 'D', _('Director')
-        writer = 'W', _('Writer')
-
-    film_work = models.ForeignKey('Filmwork', on_delete=models.CASCADE)
-    person = models.ForeignKey('Person', on_delete=models.CASCADE)
-    role = models.CharField(_('role'), max_length=100, default='', choices=Roles.choices, null=True)
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "content\".\"person_film_work"
-        constraints = [
-            models.UniqueConstraint(fields=['film_work_id', 'person_id', 'role'], name='film_work_person_role_idx'),
-        ]

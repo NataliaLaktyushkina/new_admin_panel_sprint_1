@@ -1,71 +1,18 @@
 import datetime
-import logging
-import sqlite3
-import os
-import psycopg2
 
-import uuid
 from dateutil.parser import parse
-from dataclasses import dataclass, field
 from psycopg2.extensions import connection as _connection
 from psycopg2.extras import DictCursor
-from contextlib import contextmanager
-from dotenv import load_dotenv
+
+import connection
+from models import FilmWork, Genre, Person, GenreFilmWork, PersonFilmWork
+from connection import *
+
 
 PAGE_SIZE = 1000
 
 
-@dataclass
-class FilmWork:
-    title: str
-    description: str
-    creation_date: str
-    created_at: str
-    modified_at: str
-    file_path: str
-    type: str
-    rating: float = field(default=0.0)
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-
-
-@dataclass
-class Genre:
-
-    name: str
-    description: field(default_factory='')
-    created_at: str
-    modified_at: str
-
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-
-
-@dataclass
-class Person:
-    full_name: str
-    created_at: str
-    modified_at: str
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-
-
-@dataclass
-class GenreFilmWork:
-    film_work_id: str
-    genre_id: str
-    created_at: str
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-
-
-@dataclass
-class PersonFilmWork:
-    film_work_id: str
-    person_id: str
-    role: str
-    created_at: str
-    id: uuid.UUID = field(default_factory=uuid.uuid4)
-
-
 def create_tables_list():
-
     tables_list = list()
     tables_list.append('film_work')
     tables_list.append('genre')
@@ -80,7 +27,6 @@ def get_data_from_table(curs, pg_conn, table):
 
     try:
         with pg_conn.cursor() as p_curs:
-        # p_curs = pg_conn.cursor()
             truncate_query = ' '.join(('TRUNCATE content.', table, 'CASCADE; '))
             p_curs.execute(truncate_query)
 
@@ -400,51 +346,5 @@ def load_from_sqlite(connection: sqlite3.Connection, pg_conn: _connection):
         get_data_from_table(curs, pg_conn, table_name)
 
 
-@contextmanager
-def conn_context(db_path: str):
-    # Устанавливаем соединение с БД
-    try:
-        conn = sqlite3.connect(db_path)
-        # По-умолчанию SQLite возвращает строки в виде кортежа значений.
-        # Эта строка указывает, что данные должны быть в формате "ключ-значение"
-        conn.row_factory = sqlite3.Row
-        yield conn
-    except sqlite3.Error as error:
-        logging.error('Ошибка соединения с sqlite', error)
-    finally:
-        if conn:
-            conn.close()
-
-
-def get_enviroment_var():
-    dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-    if os.path.exists(dotenv_path):
-        load_dotenv(dotenv_path)
-    env_var = {}
-    env_var['db_name'] = os.environ.get('DB_NAME')
-    env_var['user'] = os.environ.get('USER_APP')
-    env_var['password'] = os.environ.get('PASSWORD')
-    env_var['host'] = os.environ.get('HOST')
-    env_var['port'] = os.environ.get('PORT')
-    env_var['db_path'] = os.environ.get('DB_PATH'),
-
-    return env_var
-
-
 if __name__ == '__main__':
-    env_var = get_enviroment_var()
-
-    dsl = {'dbname': env_var['db_name'],
-           'user': env_var['user'],
-           'password': env_var['password'],
-           'host': env_var['host'],
-           'port': env_var['port']}
-
-    db_path = env_var['db_path']
-
-    logging.basicConfig(filename='loading.log', filemode='w')
-    logging.root.setLevel(logging.NOTSET)
-
-    with conn_context(db_path[0]) as sqlite_conn, psycopg2.connect(**dsl, cursor_factory=DictCursor) as pg_conn:
-        load_from_sqlite(sqlite_conn, pg_conn)
-    pg_conn.close()
+    connection.connect_to_db()

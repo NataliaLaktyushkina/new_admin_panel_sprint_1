@@ -96,7 +96,6 @@ class FilmWork(UUIDMixin, TimeStampedMixin):
     genres = models.ManyToManyField(Genre, through='GenreFilmwork')
     persons = models.ManyToManyField(Person, through='PersonFilmWork')
 
-
     class Meta:
         # Ваши таблицы находятся в нестандартной схеме. Это нужно указать в классе модели
         db_table = "content\".\"film_work"
@@ -115,5 +114,4 @@ class GenreFilmwork(UUIDMixin):
         constraints = [
             models.UniqueConstraint(fields=['film_work_id', 'genre_id'], name='film_work_genre_idx'),
         ]
-
 

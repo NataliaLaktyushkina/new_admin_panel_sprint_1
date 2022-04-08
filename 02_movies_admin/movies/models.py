@@ -41,9 +41,9 @@ class Genre(UUIDMixin, TimeStampedMixin):
 class PersonFilmWork(UUIDMixin):
 
     class Roles(models.TextChoices):
-        actor = 'A', _('Actor')
-        director = 'D', _('Director')
-        writer = 'W', _('Writer')
+        actor = 'actor', _('Actor')
+        director = 'director', _('Director')
+        writer = 'writer', _('Writer')
 
     film_work = models.ForeignKey('Filmwork', on_delete=models.CASCADE)
     person = models.ForeignKey('Person', on_delete=models.CASCADE)

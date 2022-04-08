@@ -29,7 +29,7 @@ class FilmWorkAdmin(admin.ModelAdmin):
     inlines = (GenreFilmworkInline, PersonFilmworkInline)
 
     # Отображение полей в списке
-    list_display = ('title', 'type', 'creation_date', 'rating', 'get_genres')
+    list_display = ('title', 'type', 'creation_date', 'rating', 'get_genres', 'get_directors')
     list_prefetch_related = ['genres', 'persons']
 
     # Фильтрация в списке
@@ -49,4 +49,8 @@ class FilmWorkAdmin(admin.ModelAdmin):
     def get_genres(self, obj):
         return ', '.join([genre.name for genre in obj.genres.all()])
 
+    def get_directors(self, obj):
+        return ', '.join([person.full_name for person in obj.persons.filter(personfilmwork__role='director')])
+
     get_genres.short_description = 'Жанры фильма'
+    get_directors.short_description = 'Режиссеры'
